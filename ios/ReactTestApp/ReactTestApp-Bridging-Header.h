@@ -30,5 +30,6 @@
 #import <SKIOSNetworkPlugin/SKIOSNetworkAdapter.h>
 #endif
 
+#import "RTAAppRegistryModule.h"
 #import "React+Compatibility.h"
 #import "UIViewController+ReactTestApp.h"

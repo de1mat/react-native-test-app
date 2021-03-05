@@ -37,6 +37,10 @@ final class ContentViewController: UITableViewController {
         static let settings = 1
     }
 
+    private var isVisible: Bool {
+        self == navigationController?.visibleViewController
+    }
+
     private let reactInstance: ReactInstance
     private var sections: [SectionData]
 
@@ -64,33 +68,29 @@ final class ContentViewController: UITableViewController {
             return
         }
 
-        let components = manifest.components
+        title = manifest.displayName
+
+        let components = manifest.components ?? []
+        if components.isEmpty {
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(onDidRegisterApps(_:)),
+                name: .ReactTestAppDidRegisterApps,
+                object: nil
+            )
+        }
+
+        updateComponentListSection(with: components, checksum: checksum)
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.reactInstance.initReact {
-                if let index = components.count == 1 ? 0 : Session.lastOpenedComponent(checksum) {
+                if !components.isEmpty, let index = components.count == 1 ? 0 : Session.lastOpenedComponent(checksum) {
                     DispatchQueue.main.async {
                         self?.navigate(to: components[index])
                     }
                 }
             }
         }
-
-        title = manifest.displayName
-
-        #if targetEnvironment(simulator)
-            let keyboardShortcut = " (⌃⌘Z)"
-        #else
-            let keyboardShortcut = ""
-        #endif
-        sections.append(SectionData(
-            items: components.enumerated().map { index, component in
-                NavigationLink(title: component.displayName ?? component.appKey) { [weak self] in
-                    self?.navigate(to: component)
-                    Session.storeComponent(index: index, checksum: checksum)
-                }
-            },
-            footer: "\(runtimeInfo())\n\nShake your device\(keyboardShortcut) to open the React Native debug menu."
-        ))
 
         let rememberLastComponentSwitch = UISwitch()
         rememberLastComponentSwitch.isOn = Session.shouldRememberLastComponent
@@ -168,6 +168,17 @@ final class ContentViewController: UITableViewController {
 
     // MARK: - Private
 
+    @objc private func onDidRegisterApps(_ notification: Notification) {
+        guard let appKeys = notification.userInfo?["apps"] as? [String] else {
+            return
+        }
+
+        updateComponentListSection(
+            with: appKeys.map { Component(appKey: $0) },
+            checksum: appKeys.joined(separator: "|")
+        )
+    }
+
     private func navigate(to component: Component) {
         guard let bridge = reactInstance.bridge,
               let navigationController = navigationController
@@ -229,5 +240,39 @@ final class ContentViewController: UITableViewController {
         let viewController = QRCodeReaderViewController(builder: builder)
         viewController.delegate = qrCodeReaderDelegate
         present(viewController, animated: true)
+    }
+
+    private func updateComponentListSection(with components: [Component], checksum: String) {
+        let items = components.enumerated().map { index, component in
+            NavigationLink(title: component.displayName ?? component.appKey) { [weak self] in
+                self?.navigate(to: component)
+                Session.storeComponent(index: index, checksum: checksum)
+            }
+        }
+
+        if sections.isEmpty {
+            #if targetEnvironment(simulator)
+                let keyboardShortcut = " (⌃⌘Z)"
+            #else
+                let keyboardShortcut = ""
+            #endif
+            sections.append(SectionData(
+                items: items,
+                footer: "\(runtimeInfo())\n\nShake your device\(keyboardShortcut) to open the React Native debug menu."
+            ))
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+
+                strongSelf.sections[0].items = items
+                strongSelf.tableView.reloadSections(IndexSet(integer: 0), with: .automatic)
+
+                if components.count == 1 && strongSelf.isVisible {
+                    strongSelf.navigate(to: components[0])
+                }
+            }
+        }
     }
 }

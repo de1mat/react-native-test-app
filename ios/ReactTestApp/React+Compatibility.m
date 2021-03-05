@@ -13,6 +13,32 @@
 
 #import <React/RCTBridge.h>
 
+void RTAEvaluateJavaScript(RCTBridge *bridge, NSData *script, NSURL *url)
+{
+    SEL enqueueApplicationScript =
+        NSSelectorFromString(@"enqueueApplicationScript:url:onComplete:");
+    if ([bridge respondsToSelector:enqueueApplicationScript]) {
+        dispatch_block_t onComplete = nil;
+
+        NSMethodSignature *methodSignature =
+            [bridge methodSignatureForSelector:enqueueApplicationScript];
+        NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
+
+        invocation.target = bridge;
+        invocation.selector = enqueueApplicationScript;
+
+        // Argument assignment must start from index 2. Cocoa runtime will set the
+        // first two to `target` and `selector`.
+        [invocation setArgument:&script atIndex:2];
+        [invocation setArgument:&url atIndex:3];
+        [invocation setArgument:&onComplete atIndex:4];
+
+        [invocation invoke];
+    } else {
+        NSLog(@"Failed to execute extra JavaScript: %@", url);
+    }
+}
+
 IMP RTASwizzleSelector(Class class, SEL originalSelector, SEL swizzledSelector)
 {
     Method originalMethod = class_getInstanceMethod(class, originalSelector);

@@ -9,6 +9,6 @@
 
 @class RCTBridge;
 
+void RTAEvaluateJavaScript(RCTBridge *, NSData *, NSURL *);
 IMP RTASwizzleSelector(Class class, SEL originalSelector, SEL swizzledSelector);
-
 void RTATriggerReloadCommand(RCTBridge *, NSString *reason);

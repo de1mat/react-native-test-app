@@ -173,12 +173,32 @@ final class ReactInstance: NSObject, RCTBridgeDelegate {
 
     // MARK: - Private
 
+    private func fetchRegisteredApps(into bridge: RCTBridge) {
+        guard let appRegistryModuleName = RTAAppRegistryModule.moduleName() else {
+            assertionFailure("This shouldn't happen")
+            return
+        }
+
+        let script = """
+        if (__fbBatchedBridge && nativeModuleProxy) {
+          const appRegistry = __fbBatchedBridge.getCallableModule("AppRegistry");
+          const appKeys = appRegistry.getAppKeys().filter((appKey) => appKey !== "LogBox");
+          nativeModuleProxy["\(appRegistryModuleName)"].registeredApps(appKeys);
+        }
+        """
+
+        let data = script.data(using: .utf8)
+        RTAEvaluateJavaScript(bridge, data, URL(string: "react-test-app://internal"))
+    }
+
     @objc private func onJavaScriptLoaded(_ notification: Notification) {
         guard let bridge = notification.userInfo?["bridge"] as? RCTBridge,
               let currentBundleURL = bridge.bundleURL
         else {
             return
         }
+
+        fetchRegisteredApps(into: bridge)
 
         RCTExecuteOnMainQueue { [weak self] in
             guard let devMenu = bridge.devMenu else {
