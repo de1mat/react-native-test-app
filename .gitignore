@@ -6,7 +6,8 @@
 .idea/
 .vs/
 .watchman-*
-.yarn-offline-mirror/
+.yarn/*
+!.yarn/releases/
 Pods/
 android/**/build/
 clang-format-diff.py
@@ -19,5 +20,6 @@ node_modules/
 !test/__fixtures__/**/node_modules/
 package-lock.json
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+template-example/
 xcuserdata/
 yarn-error.log*
