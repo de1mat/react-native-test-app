@@ -4,9 +4,9 @@
 .DS_Store
 .gradle/
 .idea/
+.pnpm/
 .vs/
 .watchman-*
-.yarn-offline-mirror/
 Pods/
 android/**/build/
 clang-format-diff.py
@@ -21,4 +21,3 @@ package-lock.json
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 template-example/
 xcuserdata/
-yarn-error.log*
